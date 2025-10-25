@@ -1,0 +1,6 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* (optional) plain CSS fallback so we still get a light background without @apply */
+body { background: #f9fafb; color: #111827; }

@@ -1,0 +1,140 @@
+// This is your Prisma schema file,
+// learn more: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum LearningFrequency {
+  DAILY
+  THREE_PER_WEEK
+  WEEKLY
+}
+
+enum ProgressionMode {
+  LINEAR
+  OPEN
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String?   // null if OAuth only
+  name          String?
+  tz            String    @default("Asia/Dubai") // IANA TZ
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Preferences (toggle channels/types), keep flexible
+  notificationPreferences Json @default("{}")
+
+  // Relations
+  goals       Goal[]
+  courses     Course[]
+  progresses  Progress[]  // ✅ back-reference for Progress.user
+
+  @@index([createdAt], map: "user_createdAt_idx")
+}
+
+model Goal {
+  id                   String            @id @default(cuid())
+  userId               String
+  learningGoal         String            // free text
+  motivation           String?           // optional free text
+  targetCompletionDate DateTime?
+  learningFrequency    LearningFrequency @default(THREE_PER_WEEK)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt], map: "goal_user_createdAt_idx")
+}
+
+model Course {
+  id              String          @id @default(cuid())
+  userId          String
+  playlistId      String          // YouTube playlist ID
+  title           String
+  description     String?
+  totalVideos     Int             @default(0)
+  totalDurationS  Int             @default(0) // seconds
+  progressionMode ProgressionMode @default(LINEAR)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sections Section[]
+  videos   Video[]   // convenience if you want course-level queries
+
+  // Prevent duplicates per user+playlist
+  @@unique([userId, playlistId], map: "course_unique_user_playlist")
+  @@index([userId, createdAt], map: "course_user_createdAt_idx")
+}
+
+model Section {
+  id         String   @id @default(cuid())
+  courseId   String
+  title      String
+  orderIndex Int      // 0-based position in course
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  videos Video[]
+
+  @@index([courseId, orderIndex], map: "section_order_idx")
+}
+
+model Video {
+  id           String  @id @default(cuid())
+  sectionId    String
+  courseId     String   // denormalized for quick course queries
+  youtubeId    String   // YouTube video ID
+  title        String
+  description  String?
+  durationS    Int      @default(0) // seconds
+  thumbnailUrl String?
+  orderIndex   Int      // 0-based position within section
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  section    Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progresses Progress[] // ✅ renamed for consistency
+
+  // Unique per course to avoid duplicates if sections are rearranged
+  @@unique([courseId, youtubeId], map: "video_unique_course_youtube")
+  @@index([sectionId, orderIndex], map: "video_section_order_idx")
+  @@index([courseId], map: "video_course_idx")
+}
+
+model Progress {
+  id          String   @id @default(cuid())
+  userId      String
+  videoId     String
+  completed   Boolean  @default(false)
+  completedAt DateTime?
+  watchTimeS  Int      @default(0) // accumulated watch time (optional MVP)
+  notes       String?  // per-video note; use a Notes table later if you want rich notes
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  // One row per user+video
+  @@unique([userId, videoId], map: "progress_unique_user_video")
+  @@index([userId], map: "progress_user_idx")
+  @@index([videoId], map: "progress_video_idx")
+}
