@@ -1,23 +1,27 @@
+// apps/web/app/courses/[id]/page.tsx
 "use client";
+
 import { useEffect, useMemo, useState } from "react";
-import { loadDemoCourse, loadProgress, setCompleted, overallPercent } from "@/lib/demo";
-import { useRouter } from "next/navigation";
+import VideoPlayer from "@/components/VideoPlayer";
+import StatCard from "@/components/StatCard";
+import ProgressBar from "@/components/ProgressBar";
+import Sidebar from "@/components/Sidebar";
+import { loadDemoCourse, loadProgress, setCompleted, overallPercent, timeRemaining, cleanYoutubeId } from "@/lib/demo";
 
 export default function CoursePage() {
-  const router = useRouter();
   const [course, setCourse] = useState<any>(null);
-  const [progress, setProgress] = useState<{[k:string]: boolean}>({});
-  const [current, setCurrent] = useState<{secIdx:number; vidIdx:number}>({ secIdx: 0, vidIdx: 0 });
+  const [progress, setProgress] = useState<Record<string, boolean>>({});
+  const [current, setCurrent] = useState<{ secIdx: number; vidIdx: number }>({ secIdx: 0, vidIdx: 0 });
 
   useEffect(() => {
     const c = loadDemoCourse();
     if (!c) {
-      router.push("/");
+      window.location.href = "/";
       return;
     }
     setCourse(c);
     setProgress(loadProgress());
-  }, [router]);
+  }, []);
 
   const currentVideo = useMemo(() => {
     if (!course) return null;
@@ -28,11 +32,17 @@ export default function CoursePage() {
   if (!course) return <main className="p-6">Loading…</main>;
 
   const percent = overallPercent(course, progress);
+  const total = course.sections.reduce((s: number, sec: any) => s + sec.videos.length, 0);
+  const remainingMin = Math.round((timeRemaining(course, progress) || 0) / 60);
+  const completedToday = 0; // simple demo value
+  const streakDays = 0;     // simple demo value
 
-  function toggleComplete(vidId: string) {
-    const newVal = !progress[vidId];
-    setCompleted(vidId, newVal);
-    setProgress({ ...progress, [vidId]: newVal });
+  function toggleComplete() {
+    if (!currentVideo) return;
+    const id = currentVideo.youtubeId;
+    const newVal = !progress[id];
+    setCompleted(id, newVal);
+    setProgress({ ...progress, [id]: newVal });
   }
 
   function goNext() {
@@ -52,67 +62,67 @@ export default function CoursePage() {
   }
 
   return (
-    <main className="grid grid-cols-12 gap-4 p-6">
-      {/* Sidebar */}
-      <aside className="col-span-4 border rounded p-3 h-[80vh] overflow-auto">
-        <div className="flex items-center justify-between mb-3">
-          <div className="font-semibold">{course.title}</div>
-          <div className="text-sm text-gray-600">{percent}%</div>
+    <main className="p-4 sm:p-6 space-y-4 max-w-[1200px] mx-auto">
+      {/* Title + summary */}
+      <div>
+        <div className="p-4 bg-green-100 text-green-800 rounded">Tailwind works</div>
+        <button className="text-sm text-gray-500 hover:underline" onClick={() => (window.location.href = "/")}>
+          ← Back
+        </button>
+        <h1 className="text-2xl sm:text-3xl font-bold mt-1">{course.title}</h1>
+        <div className="text-sm text-gray-600 mt-1">
+          {total} videos • Auto-generated course
         </div>
-        {course.sections.map((s: any, si: number) => (
-          <div key={si} className="mb-3">
-            <div className="font-medium">{s.title}</div>
-            <ul className="mt-1 space-y-1">
-              {s.videos.map((v: any, vi: number) => {
-                const active = si === current.secIdx && vi === current.vidIdx;
-                const done = !!progress[v.youtubeId];
-                return (
-                  <li key={v.youtubeId}>
-                    <button
-                      className={`w-full text-left px-2 py-1 rounded ${active ? "bg-black text-white" : "hover:bg-gray-100"}`}
-                      onClick={() => setCurrent({ secIdx: si, vidIdx: vi })}
-                    >
-                      <span className="mr-2">{done ? "✅" : "⭕"}</span>
-                      {v.title}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
+        <div className="mt-2">
+          <div className="flex items-center justify-between text-sm mb-1">
+            <span>{percent}% complete • {Object.values(progress).filter(Boolean).length} of {total} videos</span>
           </div>
-        ))}
-      </aside>
+          <ProgressBar percent={percent} />
+        </div>
+      </div>
 
-      {/* Player */}
-      <section className="col-span-8">
-        {currentVideo ? (
-          <div className="space-y-4">
-            <div className="text-xl font-semibold">{currentVideo.title}</div>
-            {/* For demo, show a placeholder YouTube embed. Replace with real ID later */}
-            <div className="aspect-video w-full border rounded overflow-hidden bg-black">
-              <iframe
-                className="w-full h-full"
-                src={`https://www.youtube.com/embed/dQw4w9WgXcQ`}
-                title="YouTube video player"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
-                allowFullScreen
-              />
-            </div>
-            <div className="flex gap-2">
-              <button className="border rounded px-3 py-2" onClick={goPrev}>Previous</button>
-              <button className="border rounded px-3 py-2" onClick={goNext}>Next</button>
-              <button
-                className={`rounded px-3 py-2 ${progress[currentVideo.youtubeId] ? "bg-green-600 text-white" : "border"}`}
-                onClick={() => toggleComplete(currentVideo.youtubeId)}
-              >
-                {progress[currentVideo.youtubeId] ? "Completed ✓" : "Mark complete"}
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div>No video selected.</div>
-        )}
-      </section>
+      {/* KPI cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-4 gap-3">
+        <StatCard title="Overall Progress" value={`${percent}%`} helper={`0 of ${total} completed`} />
+        <StatCard title="Current Streak" value={`${streakDays} days`} helper="Keep it up! 🔥" />
+        <StatCard title="Completed Today" value={`${completedToday}`} helper="Start watching" />
+        <StatCard title="Time Remaining" value={`${remainingMin}m`} helper="Estimated completion" />
+      </div>
+
+      {/* Layout: sidebar + player */}
+      <div className="grid grid-cols-12 gap-4">
+        <div className="col-span-12 md:col-span-4">
+          <Sidebar sections={course.sections} progress={progress} current={current} setCurrent={setCurrent} />
+        </div>
+
+        <div className="col-span-12 md:col-span-8 space-y-3">
+          {currentVideo ? (
+            <>
+              <VideoPlayer youtubeId={cleanYoutubeId(currentVideo.youtubeId)} />
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="text-lg font-semibold">{currentVideo.title}</div>
+                  <div className="text-sm text-gray-500">
+                    {Math.round((currentVideo.durationS || 0) / 60)} min
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button className="border rounded-lg px-3 py-2" onClick={goPrev}>Previous</button>
+                  <button className="border rounded-lg px-3 py-2" onClick={goNext}>Next</button>
+                  <button
+                    className={`rounded-lg px-3 py-2 ${progress[currentVideo.youtubeId] ? "bg-green-600 text-white" : "border"}`}
+                    onClick={toggleComplete}
+                  >
+                    {progress[currentVideo.youtubeId] ? "Completed ✓" : "Mark complete"}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="rounded-xl border bg-white p-6">Select a lecture from the left.</div>
+          )}
+        </div>
+      </div>
     </main>
   );
 }

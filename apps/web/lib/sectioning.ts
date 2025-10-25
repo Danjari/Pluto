@@ -86,7 +86,12 @@ export function autoSection(videos: RawVideo[]): Section[] {
 
     const group = videos.slice(i, j);
     const inferred = inferTitle(group, TITLE_PREFIX_MIN);
-    sections.push({ title: inferred ?? `Section ${++k}`, orderIndex: k - 1, videos: group });
+    sections.push({
+  title: inferred ?? `Section ${sections.length + 1}`,
+  orderIndex: sections.length,   // ← always unique & sequential
+  videos: group
+});
+
     i = j;
   }
   return sections;
