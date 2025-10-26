@@ -1,12 +1,13 @@
-import "./globals.css";
-import type { ReactNode } from "react";
+"use client";
 
-export const metadata = { title: "Vibe", description: "Playlist → Course" };
+import { SessionProvider } from "next-auth/react";
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="text-gray-900">{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }

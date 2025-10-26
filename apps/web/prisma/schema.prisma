@@ -1,8 +1,6 @@
-// This is your Prisma schema file,
-// learn more: https://pris.ly/d/prisma-schema
-
+// ---------- Datasource & Generator ----------
 datasource db {
-  provider = "postgresql"
+  provider = "mongodb"
   url      = env("DATABASE_URL")
 }
 
@@ -10,6 +8,7 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ---------- Enums ----------
 enum LearningFrequency {
   DAILY
   THREE_PER_WEEK
@@ -21,120 +20,153 @@ enum ProgressionMode {
   OPEN
 }
 
+// ---------- Auth models (NextAuth + Mongo) ----------
 model User {
-  id            String    @id @default(cuid())
+  id            String    @id @default(auto()) @map("_id") @db.ObjectId
   email         String    @unique
-  passwordHash  String?   // null if OAuth only
+  emailVerified DateTime?
+  passwordHash  String?
   name          String?
-  tz            String    @default("Asia/Dubai") // IANA TZ
+  image         String?
+  tz            String    @default("Asia/Dubai")
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  // Preferences (toggle channels/types), keep flexible
   notificationPreferences Json @default("{}")
 
-  // Relations
-  goals       Goal[]
-  courses     Course[]
-  progresses  Progress[]  // ✅ back-reference for Progress.user
+  // relations
+  goals    Goal[]
+  courses  Course[]
+  progress Progress[]
 
-  @@index([createdAt], map: "user_createdAt_idx")
+  accounts Account[]
+  sessions Session[]
 }
 
-model Goal {
-  id                   String            @id @default(cuid())
-  userId               String
-  learningGoal         String            // free text
-  motivation           String?           // optional free text
-  targetCompletionDate DateTime?
-  learningFrequency    LearningFrequency @default(THREE_PER_WEEK)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model Account {
+  id                String  @id @default(auto()) @map("_id") @db.ObjectId
+  userId            String  @db.ObjectId
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId, createdAt], map: "goal_user_createdAt_idx")
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sessionToken String   @unique
+  userId       String   @db.ObjectId
+  expires      DateTime
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@index([identifier, token])
+}
+
+// ---------- Domain models ----------
+model Goal {
+  id                   String            @id @default(auto()) @map("_id") @db.ObjectId
+  userId               String            @db.ObjectId
+  learningGoal         String
+  motivation           String?
+  targetCompletionDate DateTime?
+  learningFrequency    LearningFrequency @default(THREE_PER_WEEK)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
 }
 
 model Course {
-  id              String          @id @default(cuid())
-  userId          String
-  playlistId      String          // YouTube playlist ID
+  id              String          @id @default(auto()) @map("_id") @db.ObjectId
+  userId          String          @db.ObjectId
+  playlistId      String
   title           String
   description     String?
   totalVideos     Int             @default(0)
-  totalDurationS  Int             @default(0) // seconds
+  totalDurationS  Int             @default(0)
   progressionMode ProgressionMode @default(LINEAR)
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   sections Section[]
-  videos   Video[]   // convenience if you want course-level queries
+  videos   Video[]
 
-  // Prevent duplicates per user+playlist
-  @@unique([userId, playlistId], map: "course_unique_user_playlist")
-  @@index([userId, createdAt], map: "course_user_createdAt_idx")
+  @@index([userId])
+  @@index([playlistId])
 }
 
 model Section {
-  id         String   @id @default(cuid())
-  courseId   String
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  courseId   String   @db.ObjectId
   title      String
-  orderIndex Int      // 0-based position in course
+  orderIndex Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  course Course  @relation(fields: [courseId], references: [id], onDelete: Cascade)
   videos Video[]
 
-  @@index([courseId, orderIndex], map: "section_order_idx")
+  @@index([courseId, orderIndex])
 }
 
 model Video {
-  id           String  @id @default(cuid())
-  sectionId    String
-  courseId     String   // denormalized for quick course queries
-  youtubeId    String   // YouTube video ID
+  id           String   @id @default(auto()) @map("_id") @db.ObjectId
+  sectionId    String   @db.ObjectId
+  courseId     String   @db.ObjectId
+  youtubeId    String
   title        String
   description  String?
-  durationS    Int      @default(0) // seconds
+  durationS    Int      @default(0)
   thumbnailUrl String?
-  orderIndex   Int      // 0-based position within section
+  orderIndex   Int
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  section  Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
+  course   Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  progress Progress[]
 
-  section    Section    @relation(fields: [sectionId], references: [id], onDelete: Cascade)
-  course     Course     @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  progresses Progress[] // ✅ renamed for consistency
-
-  // Unique per course to avoid duplicates if sections are rearranged
-  @@unique([courseId, youtubeId], map: "video_unique_course_youtube")
-  @@index([sectionId, orderIndex], map: "video_section_order_idx")
-  @@index([courseId], map: "video_course_idx")
+  @@unique([courseId, youtubeId])
+  @@index([courseId])
+  @@index([sectionId, orderIndex])
 }
 
 model Progress {
-  id          String   @id @default(cuid())
-  userId      String
-  videoId     String
-  completed   Boolean  @default(false)
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  videoId     String    @db.ObjectId
+  completed   Boolean   @default(false)
   completedAt DateTime?
-  watchTimeS  Int      @default(0) // accumulated watch time (optional MVP)
-  notes       String?  // per-video note; use a Notes table later if you want rich notes
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  watchTimeS  Int       @default(0)
+  notes       String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
   video Video @relation(fields: [videoId], references: [id], onDelete: Cascade)
 
-  // One row per user+video
-  @@unique([userId, videoId], map: "progress_unique_user_video")
-  @@index([userId], map: "progress_user_idx")
-  @@index([videoId], map: "progress_video_idx")
+  @@unique([userId, videoId])
+  @@index([userId])
+  @@index([videoId])
 }
