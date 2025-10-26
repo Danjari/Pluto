@@ -52,9 +52,7 @@ export default function Navigation() {
               </>
             ) : (
               <>
-                <Button variant="ghost" asChild>
-                  <a href="/signup">Sign up</a>
-                </Button>
+                
                 <Button asChild>
                   <a href="/signin">Log in</a>
                 </Button>

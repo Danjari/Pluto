@@ -15,16 +15,16 @@ export default withAuth(
       hasToken: !!token
     });
 
-    // Redirect authenticated users away from auth pages
-    if (isAuthPage && isAuth) {
+    // Redirect authenticated users away from auth pages to dashboard
+    if (isAuth && isAuthPage) {
       console.log("Redirecting authenticated user from auth page to dashboard");
       return NextResponse.redirect(new URL("/dashboard", req.url));
     }
 
-    // Redirect unauthenticated users to signin for protected routes
-    if (!isAuth && !isAuthPage && req.nextUrl.pathname !== "/") {
-      console.log("Redirecting unauthenticated user to signin");
-      return NextResponse.redirect(new URL("/signin", req.url));
+    // Redirect unauthenticated users to main page for protected routes
+    if (!isAuth && !isAuthPage && req.nextUrl.pathname !== "/" && !req.nextUrl.pathname.startsWith("/api")) {
+      console.log("Redirecting unauthenticated user to main page");
+      return NextResponse.redirect(new URL("/", req.url));
     }
 
     return NextResponse.next();

@@ -35,9 +35,6 @@ export const authOptions: NextAuthOptions = {
     },
     async redirect({ url, baseUrl }) {
       // Always redirect to dashboard after successful sign-in
-      if (url.startsWith("/")) return `${baseUrl}/dashboard`;
-      // Allows callback URLs on the same origin
-      else if (new URL(url).origin === baseUrl) return url;
       return `${baseUrl}/dashboard`;
     },
   },

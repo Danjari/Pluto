@@ -208,14 +208,7 @@ export default function CourseViewer({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <a
-                href={`https://www.youtube.com/watch?v=${ytId(currentVideo.youtubeId)}`}
-                target="_blank"
-                rel="noreferrer"
-                className="px-3 py-2 rounded-lg border"
-              >
-                Open on YouTube
-              </a>
+             
               <button
                 className={`px-3 py-2 rounded-lg ${
                   done[currentVideo.id] ? "bg-green-600 text-white" : "border"

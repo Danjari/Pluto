@@ -75,8 +75,8 @@ export default function CourseGrid({ initialCourses }: { initialCourses: CourseC
                       <span>Progress</span>
                       <span>{c.percent}%</span>
                     </div>
-                    <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-red-500" style={{ width: `${c.percent}%` }} />
+                    <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
+                      <div className="h-full bg-green-500" style={{ width: `${c.percent}%` }} />
                     </div>
                   </div>
 
