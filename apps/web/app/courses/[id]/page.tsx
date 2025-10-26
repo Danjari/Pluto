@@ -5,7 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import CourseViewer from "@/components/course/CourseViewer";
 
-export default async function CoursePage({ params }: { params: { id: string } }) {
+export default async function CoursePage({ params }: { params: Promise<{ id: string }> }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) redirect("/signin");
 
@@ -15,8 +15,9 @@ export default async function CoursePage({ params }: { params: { id: string } })
   });
   if (!user) redirect("/signin");
 
+  const { id } = await params;
   const course = await prisma.course.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       sections: {
         orderBy: { orderIndex: "asc" },

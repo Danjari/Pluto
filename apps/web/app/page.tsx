@@ -1,11 +1,16 @@
-// apps/web/app/page.tsx
 "use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signIn, signOut } from "next-auth/react";
+import { useSession, signIn } from "next-auth/react";
+import { motion } from "framer-motion";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import Navigation from "@/components/Navigation";
+import HeroSection from "@/components/HeroSection";
 import SectionCard from "@/components/SectionCard";
 import { pickThumb } from "@/lib/thumbs";
+import { ArrowRight, BookOpen, Users } from "lucide-react";
 
 type PreviewSection = {
   title: string;
@@ -39,7 +44,6 @@ export default function Landing() {
   async function onPreview() {
     setErr(null);
 
-    // Gate: if not signed in, prompt login (we keep the bar only for logged-out state)
     if (!session) {
       signIn();
       return;
@@ -57,8 +61,8 @@ export default function Landing() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to preview.");
       setData(json);
-    } catch (e: any) {
-      setErr(e.message || "Failed to preview.");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to preview.");
     } finally {
       setLoading(false);
     }
@@ -82,119 +86,69 @@ export default function Landing() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to create course.");
       router.push(`/courses/${json.courseId}`);
-    } catch (e: any) {
-      setErr(e.message || "Failed to create course.");
+    } catch (e: unknown) {
+      setErr(e instanceof Error ? e.message : "Failed to create course.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6 sm:p-8 space-y-6">
-      {/* Top bar */}
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Vibe Hackathon</h1>
-        <div className="flex gap-2">
-          {session ? (
-            <>
-              <button
-                className="px-3 py-2 border rounded-lg"
-                onClick={() => router.push("/home")}
-              >
-                Home
-              </button>
-              <button
-                className="px-3 py-2 border rounded-lg"
-                onClick={() => router.push("/dashboard")}
-              >
-                Dashboard
-              </button>
-              <button
-                className="px-3 py-2 border rounded-lg"
-                onClick={() => signOut({ callbackUrl: "/" })}
-              >
-                Logout
-              </button>
-            </>
-          ) : (
-            <>
-              <a className="px-3 py-2 border rounded-lg" href="/signup">
-                Sign up
-              </a>
-              <a className="px-3 py-2 bg-black text-white rounded-lg" href="/signin">
-                Log in
-              </a>
-            </>
-          )}
-        </div>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      {/* Navigation */}
+      <Navigation />
 
-      {/* Welcome (logged-in view) */}
-      {session && (
-        <div className="rounded-2xl border bg-white p-5">
-          <h2 className="text-xl font-semibold">
-            Welcome, {session.user?.name || session.user?.email}
-          </h2>
-          <p className="text-gray-600 mt-2">
-            Head to <button className="underline" onClick={() => router.push("/home")}>Home</button>{" "}
-            to add a new course from a YouTube playlist, or open your{" "}
-            <button className="underline" onClick={() => router.push("/dashboard")}>Dashboard</button>{" "}
-            to continue learning.
-          </p>
-        </div>
-      )}
+      {/* Hero Section */}
+      <HeroSection 
+        url={url}
+        setUrl={setUrl}
+        onPreview={onPreview}
+        loading={loading}
+        err={err}
+      />
 
-      {/* Input + preview (only when NOT logged in) */}
-      {!session && (
-        <>
-          <header className="space-y-3">
-            <p className="text-gray-600">
-              Paste a public YouTube playlist URL. You can always enter it; you’ll need to sign in to view results.
-            </p>
-            <div className="flex gap-2">
-              <input
-                className="flex-1 border rounded-lg px-4 py-2"
-                placeholder="https://www.youtube.com/playlist?list=..."
-                value={url}
-                onChange={(e) => setUrl(e.target.value)}
-              />
-              <button
-                className="rounded-lg px-4 py-2 bg-black text-white disabled:opacity-60"
-                onClick={onPreview}
-                disabled={loading || !url.trim()}
-              >
-                {loading ? "Loading…" : "Preview"}
-              </button>
-            </div>
-            {err && <div className="text-red-600 text-sm">{err}</div>}
-          </header>
-
-          {/* If they happen to sign in after previewing, this block won't show because it's under !session */}
-          {data && (
-            <>
-              <div className="rounded-2xl border bg-white p-4 sm:p-5">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                  <div>
-                    <div className="text-xl font-semibold">{data.title}</div>
-                    <div className="text-sm text-gray-600">
-                      Playlist <span className="font-mono">{data.playlistId}</span> •{" "}
-                      {data.totalVideos} videos • {totalMinutes(data.totalDurationS)} min total
-                    </div>
-                  </div>
-                  <button
-                    className="rounded-lg bg-black text-white px-4 py-2"
-                    onClick={() => signIn()} // must sign in before we can save
-                    disabled={loading}
-                  >
-                    Sign in to save
-                  </button>
-                </div>
-                {data.description && (
-                  <p className="text-sm text-gray-600 mt-3 line-clamp-3">{data.description}</p>
-                )}
+      {/* Preview Section */}
+      {data && (
+        <div className="py-20 bg-white">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="space-y-8"
+            >
+              <div className="text-center">
+                <h2 className="text-4xl font-bold text-slate-900 mb-4">Course Preview</h2>
+                <p className="text-xl text-slate-600">Review your course before creating it</p>
               </div>
 
-              <div className="space-y-5">
+              <Card className="border-2 border-blue-200 shadow-lg">
+                <CardHeader>
+                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div>
+                      <CardTitle className="text-2xl text-slate-900">{data.title}</CardTitle>
+                      <CardDescription className="mt-2 text-slate-600">
+                        Playlist ID: <code className="bg-slate-100 px-2 py-1 rounded text-sm">{data.playlistId}</code> •{" "}
+                        {data.totalVideos} videos • {totalMinutes(data.totalDurationS)} min total
+                      </CardDescription>
+                    </div>
+                    <Button
+                      onClick={onCreateCourse}
+                      disabled={loading}
+                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                    >
+                      {loading ? "Creating..." : "Create Course"}
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </div>
+                </CardHeader>
+                {data.description && (
+                  <CardContent>
+                    <p className="text-slate-600">{data.description}</p>
+                  </CardContent>
+                )}
+              </Card>
+
+              <div className="space-y-6">
                 {data.sections.map((sec, i) => (
                   <SectionCard
                     key={`${i}-${sec.videos?.[0]?.youtubeId ?? sec.title ?? "sec"}`}
@@ -208,19 +162,63 @@ export default function Landing() {
                   />
                 ))}
               </div>
-            </>
-          )}
-
-          {!data && !loading && (
-            <div className="text-sm text-gray-500">
-              Tip: try a public playlist like{" "}
-              <code className="bg-gray-100 px-1 py-0.5 rounded">
-                https://www.youtube.com/playlist?list=PL8dPuuaLjXtOfse2ncvffeelTrqvHR8kS
-              </code>
-            </div>
-          )}
-        </>
+            </motion.div>
+          </div>
+        </div>
       )}
-    </main>
+
+      {/* Welcome Section for logged-in users */}
+      {session && (
+        <div className="py-20 bg-gradient-to-br from-blue-50 to-slate-50">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-center space-y-8"
+            >
+              <h2 className="text-4xl font-bold text-slate-900">
+                Welcome back, {session.user?.name || session.user?.email}!
+              </h2>
+              <p className="text-xl text-slate-600 max-w-2xl mx-auto">
+                Ready to continue your learning journey? Head to your dashboard to manage courses 
+                or create a new one from a YouTube playlist.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button size="lg" onClick={() => router.push("/home")} className="bg-green-600 hover:bg-green-700">
+                  <BookOpen className="w-5 h-5 mr-2" />
+                  Create New Course
+                </Button>
+                <Button size="lg" variant="outline" onClick={() => router.push("/dashboard")} className="border-slate-300 text-slate-700 hover:bg-slate-50">
+                  <Users className="w-5 h-5 mr-2" />
+                  View Dashboard
+                </Button>
+              </div>
+            </motion.div>
+          </div>
+        </div>
+      )}
+
+      {/* Footer */}
+      <footer className="bg-slate-900 text-white py-16">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="text-center">
+            <div className="flex items-center justify-center space-x-2 mb-6">
+              <div className="w-10 h-10 bg-green-600 rounded-lg flex items-center justify-center">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-6 h-6 text-white">
+                  <path d="M11.017 2.814a1 1 0 0 1 1.966 0l1.051 5.558a2 2 0 0 0 1.594 1.594l5.558 1.051a1 1 0 0 1 0 1.966l-5.558 1.051a2 2 0 0 0-1.594 1.594l-1.051 5.558a1 1 0 0 1-1.966 0l-1.051-5.558a2 2 0 0 0-1.594-1.594l-5.558-1.051a1 1 0 0 1 0-1.966l5.558-1.051a2 2 0 0 0 1.594-1.594z"></path>
+                  <path d="M20 2v4"></path>
+                  <path d="M22 4h-4"></path>
+                  <circle cx="4" cy="20" r="2"></circle>
+                </svg>
+              </div>
+              <span className="text-2xl font-bold">Vibe</span>
+            </div>
+            <p className="text-slate-300 text-lg">
+              Transform your learning experience with structured YouTube courses
+            </p>
+          </div>
+        </div>
+      </footer>
+    </div>
   );
 }

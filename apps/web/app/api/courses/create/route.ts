@@ -47,14 +47,17 @@ export async function POST(req: NextRequest) {
         : [
             {
               title: "Section 1",
-              videos: videos.map((v: any, j: number) => ({
-                youtubeId: v.youtubeId,
-                title: v.title || `Video ${j + 1}`,
-                description: v.description ?? null,
-                durationS: v.durationS ?? 0,
-                thumbnailUrl: v.thumbnailUrl ?? null,
-                orderIndex: j,
-              })),
+              videos: videos.map((v: unknown, j: number) => {
+                const video = v as { youtubeId: string; title?: string; description?: string; durationS?: number; thumbnailUrl?: string };
+                return {
+                  youtubeId: video.youtubeId,
+                  title: video.title || `Video ${j + 1}`,
+                  description: video.description ?? null,
+                  durationS: video.durationS ?? 0,
+                  thumbnailUrl: video.thumbnailUrl ?? null,
+                  orderIndex: j,
+                };
+              }),
             },
           ];
 
@@ -98,8 +101,8 @@ export async function POST(req: NextRequest) {
     }
 
     return Response.json({ courseId: course.id });
-  } catch (err: any) {
-    const msg = (err?.message || "Failed to create course").toString();
+  } catch (err: unknown) {
+    const msg = (err instanceof Error ? err.message : "Failed to create course").toString();
     const isQuota = /quota|403/i.test(msg) || /exceeded/i.test(msg);
     return Response.json({ error: msg }, { status: isQuota ? 429 : 500 });
   }
