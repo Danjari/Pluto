@@ -43,9 +43,6 @@ export default function Navigation() {
           <div className="flex items-center space-x-4">
             {session ? (
               <>
-                <Button variant="ghost" onClick={() => router.push("/home")}>
-                  Home
-                </Button>
                 <Button variant="ghost" onClick={() => router.push("/dashboard")}>
                   Dashboard
                 </Button>

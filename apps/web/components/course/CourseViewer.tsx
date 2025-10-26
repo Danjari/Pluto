@@ -2,7 +2,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
+import { Button } from "@/components/ui/button";
+import { ArrowLeft } from "lucide-react";
 
 type Video = {
   id: string;
@@ -27,6 +30,7 @@ export default function CourseViewer({
   course: { id: string; title: string; totalVideos: number; sections: Section[] };
   progress: Record<string, boolean>;
 }) {
+  const router = useRouter();
   const [current, setCurrent] = useState<{ s: number; v: number }>({ s: 0, v: 0 });
   const [done, setDone] = useState<Record<string, boolean>>(progress ?? {});
 
@@ -70,17 +74,38 @@ export default function CourseViewer({
   }
 
   return (
-    <main className="mx-auto max-w-7xl p-4 sm:p-6 grid grid-cols-12 gap-4">
+    <div className="min-h-screen">
+      {/* Simple Top Bar */}
+      <div className="bg-white/80 backdrop-blur-sm border-b border-slate-200 sticky top-0 z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex items-center justify-between h-16">
+            <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                onClick={() => router.push("/dashboard")}
+                className="text-slate-700 hover:bg-slate-100"
+              >
+                <ArrowLeft className="w-4 h-4 mr-2" />
+                Back to Dashboard
+              </Button>
+              <div className="h-6 w-px bg-slate-300" />
+              <h1 className="text-lg font-semibold text-slate-900">{course.title}</h1>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <main className="mx-auto max-w-7xl p-4 sm:p-6 grid grid-cols-12 gap-4">
       {/* SIDEBAR */}
       <aside className="col-span-12 md:col-span-4">
-        <div className="rounded-2xl border bg-white">
+        <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm shadow-sm">
           <div className="px-4 py-3 border-b">
             <h2 className="font-semibold">{course.title}</h2>
             <div className="text-xs text-gray-600">
               {totals.completed} of {totals.total} completed
             </div>
-            <div className="mt-2 h-2 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-red-500" style={{ width: `${totals.percent}%` }} />
+            <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
+              <div className="h-full bg-green-500" style={{ width: `${totals.percent}%` }} />
             </div>
           </div>
 
@@ -144,7 +169,7 @@ export default function CourseViewer({
       {/* PLAYER + CONTROLS */}
       <section className="col-span-12 md:col-span-8 space-y-3">
         {/* Fixed aspect ratio; never full-screen */}
-        <div className="rounded-2xl border overflow-hidden bg-black">
+        <div className="rounded-2xl border border-slate-200 overflow-hidden bg-black shadow-sm">
           <div className="relative w-full" style={{ aspectRatio: "16 / 9" }}>
             {currentVideo ? (
               <iframe
@@ -174,7 +199,7 @@ export default function CourseViewer({
         </div>
 
         {currentVideo && (
-          <div className="rounded-2xl border bg-white p-4 flex flex-wrap items-center justify-between gap-3">
+          <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-4 flex flex-wrap items-center justify-between gap-3 shadow-sm">
             <div>
               <div className="font-semibold">{currentVideo.title}</div>
               <div className="text-sm text-gray-500">
@@ -203,6 +228,7 @@ export default function CourseViewer({
           </div>
         )}
       </section>
-    </main>
+      </main>
+    </div>
   );
 }

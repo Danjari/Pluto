@@ -37,19 +37,21 @@ export default async function CoursePage({ params }: { params: Promise<{ id: str
   const progressMap = Object.fromEntries(progress.map(p => [p.videoId, p.completed]));
 
   return (
-    <CourseViewer
-      course={{
-        id: course.id,
-        title: course.title,
-        totalVideos: course.totalVideos,
-        sections: course.sections.map(s => ({
-          id: s.id,
-          title: s.title,
-          orderIndex: s.orderIndex,
-          videos: s.videos
-        }))
-      }}
-      progress={progressMap}
-    />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
+      <CourseViewer
+        course={{
+          id: course.id,
+          title: course.title,
+          totalVideos: course.totalVideos,
+          sections: course.sections.map(s => ({
+            id: s.id,
+            title: s.title,
+            orderIndex: s.orderIndex,
+            videos: s.videos
+          }))
+        }}
+        progress={progressMap}
+      />
+    </div>
   );
 }

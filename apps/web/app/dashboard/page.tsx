@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import Navigation from "@/components/Navigation";
 import TopBar from "@/components/dashboard/TopBar";
 import CourseGrid, { type CourseCardData } from "@/components/dashboard/CourseGrid";
 
@@ -70,43 +71,47 @@ export default async function DashboardPage() {
   const totalWatchTimeS = cards.reduce((s, c) => s + c.totalDurationS, 0);
 
   return (
-    <main className="mx-auto max-w-7xl p-5 sm:p-8 space-y-6">
-      <TopBar
-        appTitle="YT Course"
-        breadcrumb="Dashboard"
-        userName={session.user?.name || session.user?.email || "User"}
-      />
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
 
-      {/* KPI cards */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <div className="rounded-2xl border bg-white p-5">
-          <div className="text-sm text-gray-500">Total Courses</div>
-          <div className="text-3xl font-bold mt-1">{totalCourses}</div>
-          <div className="text-xs text-gray-500 mt-2">
-            {Math.max(totalCourses - completedCourses, 0)} in progress
+      
+      <main className="mx-auto max-w-7xl p-5 sm:p-8 space-y-6 pt-20">
+        <TopBar
+          appTitle="Pluto"
+          breadcrumb="Dashboard"
+          userName={session.user?.name || session.user?.email || "User"}
+        />
+
+        {/* KPI cards */}
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+            <div className="text-sm text-slate-500 font-medium">Total Courses</div>
+            <div className="text-3xl font-bold mt-2 text-slate-900">{totalCourses}</div>
+            <div className="text-sm text-slate-500 mt-2">
+              {Math.max(totalCourses - completedCourses, 0)} in progress
+            </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl border bg-white p-5">
-          <div className="text-sm text-gray-500">Completed</div>
-          <div className="text-3xl font-bold mt-1">{completedCourses}</div>
-          <div className="text-xs text-gray-500 mt-2">
-            {totalCourses ? Math.round((completedCourses / totalCourses) * 100) : 0}% completion rate
+          <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+            <div className="text-sm text-slate-500 font-medium">Completed</div>
+            <div className="text-3xl font-bold mt-2 text-green-600">{completedCourses}</div>
+            <div className="text-sm text-slate-500 mt-2">
+              {totalCourses ? Math.round((completedCourses / totalCourses) * 100) : 0}% completion rate
+            </div>
           </div>
-        </div>
 
-        <div className="rounded-2xl border bg-white p-5">
-          <div className="text-sm text-gray-500">Total Watch Time</div>
-          <div className="text-3xl font-bold mt-1">
-            {Math.floor(totalWatchTimeS / 3600)}h {Math.round((totalWatchTimeS % 3600) / 60)}m
+          <div className="rounded-2xl border border-slate-200 bg-white/80 backdrop-blur-sm p-6 shadow-sm">
+            <div className="text-sm text-slate-500 font-medium">Total Watch Time</div>
+            <div className="text-3xl font-bold mt-2 text-blue-600">
+              {Math.floor(totalWatchTimeS / 3600)}h {Math.round((totalWatchTimeS % 3600) / 60)}m
+            </div>
+            <div className="text-sm text-slate-500 mt-2">Across all courses</div>
           </div>
-          <div className="text-xs text-gray-500 mt-2">Across all courses</div>
-        </div>
-      </section>
+        </section>
 
-      {/* Search + grid of cards (client) */}
-      <CourseGrid initialCourses={cards} />
-    </main>
+        {/* Search + grid of cards (client) */}
+        <CourseGrid initialCourses={cards} />
+      </main>
+    </div>
   );
 }
     

@@ -2,26 +2,34 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { useSession, signOut } from "next-auth/react";
+import { signOut } from "next-auth/react";
+import { useRequireAuth } from "@/hooks/useAuth";
+import ProtectedRoute from "@/components/ProtectedRoute";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
+import { Loader2, LogOut, BookOpen } from "lucide-react";
 
 export default function HomeAfterLogin() {
-  const { data: session, status } = useSession();
+  const { user, isLoading } = useRequireAuth();
   const router = useRouter();
 
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
-  if (status === "loading") {
-    return <main className="p-6">Loading…</main>;
-  }
+  const playlistPlaceholders = [
+    "Paste a YouTube playlist URL to get started"
+  ];
 
-  if (!session) {
-    // If someone hits /home without being signed in, send them to the sign-in page.
-    // You can also show a sign-in button here instead of redirecting.
-    if (typeof window !== "undefined") router.replace("/signin");
-    return null;
-  }
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onCreate();
+  };
 
   async function onCreate() {
     if (!url.trim()) return;
@@ -44,53 +52,82 @@ export default function HomeAfterLogin() {
   }
 
   return (
-    <main className="mx-auto max-w-5xl p-6 sm:p-8 space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Welcome, {session.user?.name || session.user?.email}</h1>
-          <p className="text-sm text-gray-600">
-            User ID: {(session.user as any)?.id ?? "N/A"}
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <button
-            className="px-3 py-2 border rounded-lg"
-            onClick={() => router.push("/dashboard")}
-          >
-            Dashboard
-          </button>
-          <button
-            className="px-3 py-2 border rounded-lg"
-            onClick={() => signOut({ callbackUrl: "/" })}
-          >
-            Logout
-          </button>
+    <ProtectedRoute>
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-16">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          {/* Header */}
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900">
+                Welcome back, {user?.name || user?.email}!
+              </h1>
+              <p className="text-slate-600 mt-1">
+                Ready to create your next learning course?
+              </p>
+            </div>
+            <div className="flex gap-3">
+              <Button
+                variant="outline"
+                onClick={() => router.push("/dashboard")}
+                className="border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                <BookOpen className="w-4 h-4 mr-2" />
+                Dashboard
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => signOut({ callbackUrl: "/" })}
+                className="border-slate-300 text-slate-700 hover:bg-slate-50"
+              >
+                <LogOut className="w-4 h-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          </div>
+
+          {/* Course Creation */}
+         
+            <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-xl">
+              <CardHeader className="text-center">
+                <CardTitle className="text-2xl text-slate-900">Create New Course</CardTitle>
+                <CardDescription className="text-slate-600">
+                  Transform any YouTube playlist into a structured learning experience
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <PlaceholdersAndVanishInput
+                  placeholders={playlistPlaceholders}
+                  onChange={handleInputChange}
+                  onSubmit={handleSubmit}
+                />
+                
+                <div className="flex justify-center">
+                  <Button
+                    onClick={onCreate}
+                    disabled={busy || !url.trim()}
+                    className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
+                  >
+                    {busy ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creating Course...
+                      </>
+                    ) : (
+                      "Create Course"
+                    )}
+                  </Button>
+                </div>
+
+                {err && (
+                  <div className="text-sm text-red-600 text-center bg-red-50 p-3 rounded-md">
+                    {err}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+         
         </div>
       </div>
-
-      {/* Playlist bar */}
-      <section className="space-y-3">
-        <p className="text-gray-600">
-          Paste a public YouTube playlist URL to create a new course.
-        </p>
-        <div className="flex gap-2">
-          <input
-            className="flex-1 border rounded-lg px-4 py-2"
-            placeholder="https://www.youtube.com/playlist?list=..."
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-          />
-          <button
-            className="rounded-lg px-4 py-2 bg-black text-white disabled:opacity-60"
-            onClick={onCreate}
-            disabled={busy || !url.trim()}
-          >
-            {busy ? "Creating…" : "Create course"}
-          </button>
-        </div>
-        {err && <div className="text-sm text-red-600">{err}</div>}
-      </section>
-    </main>
+    </ProtectedRoute>
   );
 }

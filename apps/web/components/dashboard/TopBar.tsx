@@ -3,6 +3,8 @@
 
 import { signOut } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
+import { Plus, Home, LogOut } from "lucide-react";
 
 export default function TopBar({
   appTitle,
@@ -15,38 +17,41 @@ export default function TopBar({
 }) {
   const router = useRouter();
   return (
-    <header className="flex items-center justify-between">
-      <div className="flex items-center gap-3">
-        <h1 className="text-2xl font-extrabold">
-          <span className="text-red-600">{appTitle}</span>
-        </h1>
+    <header className="flex items-center justify-between mb-8">
+      <div className="flex items-center gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900">
+            Welcome back, {userName}!
+          </h1>
+          <p className="text-slate-600 mt-1">
+            Manage your learning courses and track your progress
+          </p>
+        </div>
         {breadcrumb && (
-          <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
+          <span className="text-sm px-3 py-1 rounded-full bg-green-100 text-green-700 font-medium">
             {breadcrumb}
           </span>
         )}
       </div>
 
-      <div className="flex items-center gap-2">
-        <button
-          className="px-3 py-2 border rounded-lg hover:bg-gray-50"
-          onClick={() => router.push("/")}
-        >
-          Home
-        </button>
-        <button
-          className="px-3 py-2 bg-black text-white rounded-lg"
+      <div className="flex items-center gap-3">
+
+        <Button
           onClick={() => router.push("/home")}
+          className="bg-green-600 hover:bg-green-700 text-white"
         >
+          <Plus className="w-4 h-4 mr-2" />
           Add New Course
-        </button>
-        <button
-          className="px-3 py-2 border rounded-lg hover:bg-gray-50"
+        </Button>
+        <Button
+          variant="outline"
           onClick={() => signOut({ callbackUrl: "/" })}
+          className="border-slate-300 text-slate-700 hover:bg-slate-50"
           title={userName ?? "Sign out"}
         >
+          <LogOut className="w-4 h-4 mr-2" />
           Logout
-        </button>
+        </Button>
       </div>
     </header>
   );

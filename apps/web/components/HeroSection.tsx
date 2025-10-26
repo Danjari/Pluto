@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { BackgroundRippleEffect } from "@/components/ui/background-ripple-effect";
 import { BackgroundGradient } from "@/components/ui/background-gradient";
+import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { Play, BookOpen, Clock, Users } from "lucide-react";
 
 interface HeroSectionProps {
@@ -20,6 +21,19 @@ interface HeroSectionProps {
 
 export default function HeroSection({ url, setUrl, onPreview, loading, err }: HeroSectionProps) {
   const { data: session } = useSession();
+
+  const playlistPlaceholders = [
+    "Paste a YouTube playlist URL to get started"
+  ];
+
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setUrl(e.target.value);
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    onPreview();
+  };
 
   return (
     <div className="relative min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 flex items-center justify-center pt-16 overflow-hidden">
@@ -65,22 +79,18 @@ export default function HeroSection({ url, setUrl, onPreview, loading, err }: He
               <Card className="bg-white/80 backdrop-blur-sm border-slate-200 shadow-xl">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl text-slate-900">Start Learning</CardTitle>
-                  <CardDescription className="text-slate-600">
-                    Paste a YouTube playlist URL to get started
-                  </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="flex gap-2">
-                    <Input
-                      placeholder="https://www.youtube.com/playlist?list=..."
-                      value={url}
-                      onChange={(e) => setUrl(e.target.value)}
-                      className="bg-white border-slate-300 text-slate-900 placeholder:text-slate-500 focus:ring-green-500 focus:border-green-500"
-                    />
+                  <PlaceholdersAndVanishInput
+                    placeholders={playlistPlaceholders}
+                    onChange={handleInputChange}
+                    onSubmit={handleSubmit}
+                  />
+                  <div className="flex justify-center">
                     <Button
                       onClick={onPreview}
                       disabled={loading || !url.trim()}
-                      className="bg-green-600 hover:bg-green-700 text-white px-6"
+                      className="bg-green-600 hover:bg-green-700 text-white px-8 py-2"
                     >
                       {loading ? (
                         <motion.div
@@ -91,7 +101,7 @@ export default function HeroSection({ url, setUrl, onPreview, loading, err }: He
                       ) : (
                         <>
                           <Play className="w-4 h-4 mr-2" />
-                          Preview
+                          Preview Course
                         </>
                       )}
                     </Button>
@@ -107,7 +117,7 @@ export default function HeroSection({ url, setUrl, onPreview, loading, err }: He
                   )}
                   {!session && (
                     <p className="text-sm text-slate-500 text-center">
-                      You'll need to sign in to preview and create courses
+                      You&apos;ll need to sign in to preview and create courses
                     </p>
                   )}
                 </CardContent>
