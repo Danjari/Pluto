@@ -12,7 +12,7 @@ export default function SignInPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = "/dashboard";
+  const callbackUrl = searchParams.get("callbackUrl") || "/dashboard";
 
   useEffect(() => {
     // Check if user is already authenticated

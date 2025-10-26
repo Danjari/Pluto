@@ -1,7 +1,7 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useRequireAuth } from "@/hooks/useAuth";
 import ProtectedRoute from "@/components/ProtectedRoute";
@@ -13,6 +13,7 @@ import { Loader2, LogOut, BookOpen } from "lucide-react";
 export default function HomeAfterLogin() {
   const { user, isLoading } = useRequireAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
 
   const [url, setUrl] = useState("");
   const [busy, setBusy] = useState(false);
@@ -31,6 +32,21 @@ export default function HomeAfterLogin() {
     onCreate();
   };
 
+  // Handle URL from query params after signin
+  useEffect(() => {
+    if (!isLoading && user) {
+      const playlistUrl = searchParams.get('playlistUrl');
+      if (playlistUrl) {
+        const decodedUrl = decodeURIComponent(playlistUrl);
+        setUrl(decodedUrl);
+        // Auto-create course from the preserved URL
+        setTimeout(() => {
+          onCreate();
+        }, 100);
+      }
+    }
+  }, [isLoading, user, searchParams]);
+
   async function onCreate() {
     if (!url.trim()) return;
     setBusy(true);
@@ -43,6 +59,9 @@ export default function HomeAfterLogin() {
       });
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error || "Failed to create course");
+      
+      // Clear URL from browser history
+      window.history.replaceState({}, '', '/home');
       router.push(`/courses/${json.courseId}`);
     } catch (e: any) {
       setErr(e.message || "Failed");

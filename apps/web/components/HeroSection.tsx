@@ -32,6 +32,13 @@ export default function HeroSection({ url, setUrl, onPreview, loading, err }: He
 
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    if (!session) {
+      // Encode the URL and redirect to signin with callbackUrl
+      const encodedUrl = encodeURIComponent(url);
+      const callbackUrl = encodeURIComponent(`/home?playlistUrl=${encodedUrl}`);
+      window.location.href = `/signin?callbackUrl=${callbackUrl}`;
+      return;
+    }
     onPreview();
   };
 
