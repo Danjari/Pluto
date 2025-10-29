@@ -77,7 +77,10 @@ export default function Landing() {
 
   async function onCreateCourse() {
     if (!session) {
-      signIn();
+      // Encode the URL and redirect to signin with callbackUrl
+      const encodedUrl = encodeURIComponent(url);
+      const callbackUrl = encodeURIComponent(`/home?playlistUrl=${encodedUrl}`);
+      window.location.href = `/signin?callbackUrl=${callbackUrl}`;
       return;
     }
     if (!url.trim()) return;
