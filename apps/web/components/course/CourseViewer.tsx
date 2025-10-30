@@ -1,11 +1,13 @@
 // apps/web/components/course/CourseViewer.tsx
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Settings } from "lucide-react";
+import CourseSettingsModal from "./CourseSettingsModal";
+import DailyCheckInModal from "./DailyCheckInModal";
 
 type Video = {
   id: string;
@@ -33,6 +35,9 @@ export default function CourseViewer({
   const router = useRouter();
   const [current, setCurrent] = useState<{ s: number; v: number }>({ s: 0, v: 0 });
   const [done, setDone] = useState<Record<string, boolean>>(progress ?? {});
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [checkInOpen, setCheckInOpen] = useState(false);
+  const [hasCheckedInToday, setHasCheckedInToday] = useState(false);
 
   const flatVideos = useMemo(() => course.sections.flatMap(s => s.videos), [course.sections]);
   const currentVideo = course.sections[current.s]?.videos[current.v] ?? null;
@@ -42,6 +47,46 @@ export default function CourseViewer({
     const completed = Object.values(done).filter(Boolean).length;
     return { total, completed, percent: total ? Math.round((completed / total) * 100) : 0 };
   }, [course.sections, done]);
+
+  // Check if user has checked in today
+  useEffect(() => {
+    const checkDailyCheckIn = async () => {
+      try {
+        const response = await fetch(`/api/courses/${course.id}/check-in`);
+        if (response.ok) {
+          const data = await response.json();
+          setHasCheckedInToday(data.hasCheckedInToday);
+          
+          // For testing: Don't auto-show modal, use the "Test Check-in" button instead
+          // if (!data.hasCheckedInToday) {
+          //   setCheckInOpen(true);
+          // }
+        }
+      } catch (error) {
+        console.error("Error checking daily check-in:", error);
+      }
+    };
+
+    checkDailyCheckIn();
+  }, [course.id]);
+
+  const handleCheckIn = async (mood: string, notes: string) => {
+    try {
+      const response = await fetch(`/api/courses/${course.id}/check-in`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ mood, notes }),
+      });
+
+      if (response.ok) {
+        setHasCheckedInToday(true);
+      } else {
+        console.error("Failed to check in");
+      }
+    } catch (error) {
+      console.error("Error checking in:", error);
+    }
+  };
 
   function ytId(yid: string) {
     return yid.includes("_") ? yid.split("_")[0] : yid;
@@ -90,6 +135,31 @@ export default function CourseViewer({
               </Button>
               <div className="h-6 w-px bg-slate-300" />
               <h1 className="text-lg font-semibold text-slate-900">{course.title}</h1>
+              {hasCheckedInToday && (
+                <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full flex items-center gap-1">
+                  <span>🪐</span>
+                  <span>Checked in today</span>
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2">
+              {/* Testing: Reset check-in button */}
+              <Button
+                variant="outline"
+                onClick={() => setCheckInOpen(true)}
+                className="text-slate-700 hover:bg-slate-100"
+                size="sm"
+              >
+                Test Check-in
+              </Button>
+              <Button
+                variant="ghost"
+                onClick={() => setSettingsOpen(true)}
+                className="text-slate-700 hover:bg-slate-100"
+                size="sm"
+              >
+                <Settings className="w-4 h-4" />
+              </Button>
             </div>
           </div>
         </div>
@@ -222,6 +292,22 @@ export default function CourseViewer({
         )}
       </section>
       </main>
+
+      {/* Settings Modal */}
+      <CourseSettingsModal
+        isOpen={settingsOpen}
+        onClose={() => setSettingsOpen(false)}
+        courseId={course.id}
+        courseTitle={course.title}
+      />
+
+      {/* Daily Check-in Modal */}
+      <DailyCheckInModal
+        isOpen={checkInOpen}
+        onClose={() => setCheckInOpen(false)}
+        courseTitle={course.title}
+        onCheckIn={handleCheckIn}
+      />
     </div>
   );
 }

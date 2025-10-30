@@ -38,6 +38,8 @@ model User {
   goals    Goal[]
   courses  Course[]
   progress Progress[]
+  courseNotificationSettings CourseNotificationSettings[]
+  dailyCheckIns DailyCheckIn[]
 
   accounts Account[]
   sessions Session[]
@@ -111,6 +113,8 @@ model Course {
   user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   sections Section[]
   videos   Video[]
+  notificationSettings CourseNotificationSettings?
+  dailyCheckIns DailyCheckIn[]
 
   @@index([userId])
   @@index([playlistId])
@@ -169,4 +173,48 @@ model Progress {
   @@unique([userId, videoId])
   @@index([userId])
   @@index([videoId])
+}
+
+// ---------- Notification models ----------
+model CourseNotificationSettings {
+  id                    String   @id @default(auto()) @map("_id") @db.ObjectId
+  courseId              String   @db.ObjectId @unique
+  userId                String   @db.ObjectId
+  emailNotificationsEnabled Boolean @default(true)
+  studyDays             String[]  // ["MON", "TUE", "WED", "THU", "FRI", "SAT", "SUN"]
+  notificationTime      String    @default("21:00") // HH:mm format in user's timezone
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+  
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId])
+}
+
+model EmailNotificationLog {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  courseId   String   @db.ObjectId
+  sentAt     DateTime @default(now())
+  emailType  String   // "reminder" or "test"
+  
+  @@index([userId, courseId, sentAt])
+}
+
+model DailyCheckIn {
+  id         String   @id @default(auto()) @map("_id") @db.ObjectId
+  userId     String   @db.ObjectId
+  courseId   String   @db.ObjectId
+  checkInDate String  // "2024-01-15" format for easy querying
+  mood       String?  // Optional: "great", "okay", "struggling", etc.
+  notes      String?  // Optional: user's notes about their study session
+  createdAt  DateTime @default(now())
+  
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, courseId, checkInDate])
+  @@index([userId, courseId])
+  @@index([checkInDate])
 }
