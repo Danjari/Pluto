@@ -3,7 +3,7 @@ import { NextRequest } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { buildPlaylistPreview } from "@/lib/youtube";
+import { buildPlaylistPreview, isValidYouTubePlaylistUrl } from "@/lib/youtube";
 import { autoSection } from "@/lib/sectioning";
 import { z } from "zod";
 
@@ -18,6 +18,12 @@ export async function POST(req: NextRequest) {
     ({ playlistUrl } = BodySchema.parse(await req.json()));
   } catch {
     return Response.json({ error: "Invalid body. Expect { playlistUrl: <url> }" }, { status: 400 });
+  }
+
+  // Validate that it's a YouTube playlist URL
+  const validation = isValidYouTubePlaylistUrl(playlistUrl);
+  if (!validation.valid) {
+    return Response.json({ error: validation.error }, { status: 400 });
   }
 
   try {
@@ -103,6 +109,20 @@ export async function POST(req: NextRequest) {
     return Response.json({ courseId: course.id });
   } catch (err: unknown) {
     const msg = (err instanceof Error ? err.message : "Failed to create course").toString();
+    
+    // Check for specific error messages and provide user-friendly responses
+    if (msg.includes("could not find `list` parameter") || msg.includes("Invalid playlist URL")) {
+      return Response.json({ 
+        error: "This doesn't look like a YouTube playlist link. Please make sure you're copying the playlist URL (not a single video)." 
+      }, { status: 400 });
+    }
+    
+    if (msg.includes("Playlist not found")) {
+      return Response.json({ 
+        error: "Playlist not found. Please make sure the playlist is public and the URL is correct." 
+      }, { status: 404 });
+    }
+    
     const isQuota = /quota|403/i.test(msg) || /exceeded/i.test(msg);
     return Response.json({ error: msg }, { status: isQuota ? 429 : 500 });
   }

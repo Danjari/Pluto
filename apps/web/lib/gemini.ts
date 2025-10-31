@@ -1,4 +1,4 @@
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { GoogleGenerativeAI, SchemaType as Type } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!);
 
@@ -11,11 +11,40 @@ export interface RoastingEmailContext {
   completedVideos: number;
 }
 
-export async function generateRoastingEmail(context: RoastingEmailContext): Promise<{ subject: string; body: string }> {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+export interface EmailContent {
+  subject: string;
+  body: string;
+  endingRemarks: string;
+}
+
+export async function generateRoastingEmail(context: RoastingEmailContext): Promise<EmailContent> {
+  const model = genAI.getGenerativeModel({ 
+    model: "gemini-2.0-flash-exp",
+    generationConfig: {
+      responseMimeType: "application/json",
+      responseSchema: {
+        type: Type.OBJECT,
+        properties: {
+          subject: {
+            type: Type.STRING,
+            description: "Short, punchy email subject line (max 60 characters) with emoji"
+          },
+          body: {
+            type: Type.STRING,
+            description: "Main email body content in HTML format with <br> tags for line breaks. Should be short, punchy, and memorable (max 100 words). Use HTML tags for formatting."
+          },
+          endingRemarks: {
+            type: Type.STRING,
+            description: "Closing signature/sign-off (e.g., 'Regards, Your AI Overlord 😈' or 'Your worst nightmare if you don't start studying now')"
+          }
+        },
+        required: ["subject", "body", "endingRemarks"]
+      }
+    }
+  });
 
   const prompt = `
-You are a playful, motivating AI assistant that sends Duolingo-style "roasting" emails to encourage users to continue their online course. 
+You are a mean roasting, motivating AI assistant that sends Duolingo-style "roasting" emails to encourage users to continue their online course. 
 
 User Context:
 - Name: ${context.userName}
@@ -23,21 +52,25 @@ User Context:
 - Progress: ${context.completedVideos}/${context.totalVideos} videos (${context.progressPercent}%)
 - Days since last study: ${context.daysSinceLastStudy}
 
-Generate a creative, funny, and motivating email that:
-1. Playfully "roasts" the user for not studying
-2. Uses humor and guilt-tripping (but in a friendly way)
+Generate a creative, and mean roasting, email that:
+1. "roasts" the user for not studying 
+2. Uses humor and guilt-tripping like best friends. but in a mean way.
 3. Encourages them to continue their course
-4. Includes emojis and personality
-5. Is motivating and makes them want to study
+4. Includes personality
+5. Is mean and makes them want to share this with their friends and family.
 
-Format your response as JSON with "subject" and "body" fields. The body should be HTML-ready.
+Requirements:
+- subject: Short, punchy, max 60 characters, include emoji
+- body: Main content, max 100 words, use HTML <br> tags for line breaks, make it personal and painfully creative
+- endingRemarks: Creative sign-off that fits the roasting tone
+Make no reference to you being an AI assistant. unless it's to say even you are better than them.
 
 Examples of tone:
-- "Hey ${context.userName}, that ${context.courseTitle} isn't going to learn itself! 😤"
-- "Your course is gathering digital dust while you're out there living your best life..."
-- "I see you've been ghosting your studies again... 👻"
+- Subject: "Moudjahid, 'Beginner' Doesn't Mean 'Never Started'! 😒"
+- Body: "Hey Moudjahid! Your course is literally begging for attention. It's been 0 days and you're at 0% completion. Did you accidentally enroll in 'Advanced Procrastination'? 😏"
+- Ending: "Regards (and extreme judgment), Your worst nightmare if you don't start studying now"
 
-Make it personal, funny, and motivating!
+Make it personal, originally funny, mean! Keep it short, punchy and unforgettable.
 `;
 
   try {
@@ -45,25 +78,43 @@ Make it personal, funny, and motivating!
     const response = await result.response;
     const text = response.text();
     
-    // Try to parse as JSON, fallback to structured response
-    try {
-      const parsed = JSON.parse(text);
-      return {
-        subject: parsed.subject || `Don't abandon ${context.courseTitle}! 😤`,
-        body: parsed.body || generateFallbackEmail(context)
-      };
-    } catch {
-      // If not JSON, create structured response
-      return {
-        subject: `Don't abandon ${context.courseTitle}! 😤`,
-        body: text || generateFallbackEmail(context)
-      };
+    // Parse the structured JSON response
+    const parsed: EmailContent = JSON.parse(text);
+    
+    // Clean up and validate the response
+    const cleanSubject = (parsed.subject || `Don't abandon ${context.courseTitle}! 😤`)
+      .replace(/\n/g, ' ')
+      .trim()
+      .substring(0, 100); // Safety limit
+    
+    let cleanBody = parsed.body || '';
+    if (typeof cleanBody === 'string') {
+      // Ensure we have HTML breaks instead of raw newlines
+      cleanBody = cleanBody
+        .replace(/\n/g, '<br>')
+        .replace(/\\n/g, '<br>')
+        .trim();
     }
+    
+    const cleanEnding = (parsed.endingRemarks || 'Regards, Your Study Buddy 📚')
+      .replace(/\n/g, ' ')
+      .trim();
+    
+    // Combine body with ending remarks
+    const fullBody = `${cleanBody}<br><br><strong>${cleanEnding}</strong>`;
+    
+    return {
+      subject: cleanSubject,
+      body: fullBody,
+      endingRemarks: cleanEnding
+    };
   } catch (error) {
     console.error("Error generating email with Gemini:", error);
+    const fallback = generateFallbackEmail(context);
     return {
       subject: `Time to get back to ${context.courseTitle}! 📚`,
-      body: generateFallbackEmail(context)
+      body: fallback,
+      endingRemarks: "Regards, Your Study Buddy 📚"
     };
   }
 }
