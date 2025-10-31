@@ -17,6 +17,37 @@ export function extractPlaylistId(playlistUrl: string): string | null {
   }
 }
 
+export function isValidYouTubePlaylistUrl(url: string): { valid: boolean; error?: string } {
+  try {
+    const u = new URL(url);
+    
+    // Check if it's a YouTube domain
+    const youtubeDomains = ['youtube.com', 'www.youtube.com', 'youtu.be', 'm.youtube.com'];
+    if (!youtubeDomains.includes(u.hostname) && !u.hostname.endsWith('.youtube.com')) {
+      return {
+        valid: false,
+        error: "Please paste a YouTube playlist link. Only YouTube playlists are supported."
+      };
+    }
+    
+    // Check if it has a playlist parameter
+    const playlistId = u.searchParams.get("list");
+    if (!playlistId) {
+      return {
+        valid: false,
+        error: "This doesn't look like a YouTube playlist link. Please make sure you're copying the playlist URL (not a single video)."
+      };
+    }
+    
+    return { valid: true };
+  } catch {
+    return {
+      valid: false,
+      error: "Invalid URL. Please paste a valid YouTube playlist link."
+    };
+  }
+}
+
 type PlaylistMeta = { title: string; description?: string };
 
 export async function getPlaylistMeta(playlistId: string): Promise<PlaylistMeta> {
