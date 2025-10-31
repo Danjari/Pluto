@@ -21,32 +21,32 @@ interface DailyCheckInModalProps {
 const MOOD_OPTIONS = [
   { 
     key: "amazing", 
-    label: "Amazing! 🚀", 
+    label: "Amazing", 
     icon: Heart
   },
   { 
     key: "great", 
-    label: "Great! 😊", 
+    label: "Great", 
     icon: Smile
   },
   { 
     key: "okay", 
-    label: "Okay 👍", 
+    label: "Okay", 
     icon: Meh
   },
   { 
     key: "struggling", 
-    label: "Struggling 😅", 
+    label: "Struggling", 
     icon: Frown
   },
   { 
     key: "tired", 
-    label: "Tired 😴", 
+    label: "Tired", 
     icon: Coffee
   },
   { 
     key: "focused", 
-    label: "Focused 🧠", 
+    label: "Focused", 
     icon: Brain
   }
 ];
@@ -93,19 +93,18 @@ export default function DailyCheckInModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <div className="flex items-center space-x-4">
+          <div className="flex flex-col items-center space-y-4">
             <Image
               src="/smilingPluto.png"
               alt="Pluto"
-              width={100}
-              height={60}
+              width={250}
+              height={150}
               className="rounded-full"
+              unoptimized
             />
-            <div>
-              <DialogTitle className="text-lg">
-                How are you feeling about <strong>{courseTitle}</strong> today?
-              </DialogTitle>
-            </div>
+            <DialogTitle className="text-lg text-center">
+              How are you feeling about <strong>{courseTitle}</strong> today?
+            </DialogTitle>
           </div>
         </DialogHeader>
 
