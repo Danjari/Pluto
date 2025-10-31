@@ -51,43 +51,37 @@ export function createEmailTemplate(context: {
       <meta name="viewport" content="width=device-width, initial-scale=1.0">
       <title>${context.courseTitle} - Study Reminder</title>
     </head>
-    <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: Arial, sans-serif;">
-      <div style="max-width: 600px; margin: 0 auto; background-color: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
-        
-        <!-- Header -->
-        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center;">
-          <h1 style="color: white; margin: 0; font-size: 28px;">📚 Study Reminder</h1>
-          <p style="color: rgba(255,255,255,0.9); margin: 10px 0 0 0; font-size: 16px;">Time to get back to learning!</p>
-        </div>
+    <body style="margin: 0; padding: 0; background-color: #ffffff; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; color: #333333; line-height: 1.6;">
+      <div style="max-width: 600px; margin: 0 auto; padding: 20px;">
         
         <!-- Main Content -->
-        <div style="padding: 30px;">
+        <div style="padding: 0;">
           ${context.body}
           
           <!-- Progress Bar -->
-          <div style="margin: 30px 0; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
-            <h3 style="margin: 0 0 15px 0; color: #333;">Your Progress</h3>
-            <div style="background-color: #e9ecef; height: 20px; border-radius: 10px; overflow: hidden;">
-              <div style="background: linear-gradient(90deg, #4CAF50, #45a049); height: 100%; width: ${context.progressPercent}%; transition: width 0.3s ease;"></div>
+          <div style="margin: 30px 0; padding: 15px 0; border-top: 1px solid #e5e5e5; border-bottom: 1px solid #e5e5e5;">
+            <p style="margin: 0 0 10px 0; color: #333; font-size: 14px; font-weight: 500;">Your Progress</p>
+            <div style="background-color: #e5e5e5; height: 8px; border-radius: 4px; overflow: hidden; margin-bottom: 8px;">
+              <div style="background-color: #0066cc; height: 100%; width: ${context.progressPercent}%;"></div>
             </div>
-            <p style="margin: 10px 0 0 0; color: #666; font-size: 14px;">
+            <p style="margin: 0; color: #666; font-size: 13px;">
               ${context.completedVideos} of ${context.totalVideos} videos completed (${context.progressPercent}%)
             </p>
           </div>
           
-          <!-- CTA Button -->
-          <div style="text-align: center; margin: 30px 0;">
+          <!-- Simple Link -->
+          <div style="margin: 25px 0;">
             <a href="${process.env.NEXTAUTH_URL}/courses/${context.courseId}" 
-               style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 25px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-              Continue Learning Now! 🚀
+               style="color: #0066cc; text-decoration: underline; font-size: 14px;">
+              Continue Learning →
             </a>
           </div>
           
           <!-- Footer -->
-          <div style="border-top: 1px solid #e9ecef; padding-top: 20px; margin-top: 30px; text-align: center;">
-            <p style="color: #666; font-size: 12px; margin: 0;">
+          <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e5e5e5;">
+            <p style="color: #999; font-size: 12px; margin: 0; line-height: 1.5;">
               You're receiving this because you have email notifications enabled for this course.<br>
-              <a href="${process.env.NEXTAUTH_URL}/courses/${context.courseId}" style="color: #667eea;">Manage notification settings</a>
+              <a href="${process.env.NEXTAUTH_URL}/courses/${context.courseId}" style="color: #0066cc; text-decoration: underline;">Manage notification settings</a>
             </p>
           </div>
         </div>
