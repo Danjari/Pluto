@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { signOut } from "next-auth/react";
 import { useRequireAuth } from "@/hooks/useAuth";
@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { PlaceholdersAndVanishInput } from "@/components/ui/placeholders-and-vanish-input";
 import { Loader2, LogOut, BookOpen } from "lucide-react";
 
-export default function HomeAfterLogin() {
+function HomeAfterLoginContent() {
   const { user, isLoading } = useRequireAuth();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -148,5 +148,25 @@ export default function HomeAfterLogin() {
         </div>
       </div>
     </ProtectedRoute>
+  );
+}
+
+export default function HomeAfterLogin() {
+  return (
+    <Suspense fallback={
+      <ProtectedRoute>
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-16 flex items-center justify-center">
+          <Card className="max-w-md w-full bg-white/80 backdrop-blur-sm border-slate-200 shadow-xl">
+            <CardContent className="p-6">
+              <div className="flex items-center justify-center">
+                <Loader2 className="w-6 h-6 animate-spin" />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </ProtectedRoute>
+    }>
+      <HomeAfterLoginContent />
+    </Suspense>
   );
 }
