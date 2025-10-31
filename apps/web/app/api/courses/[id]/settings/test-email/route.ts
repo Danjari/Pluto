@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
+import { generateRoastingEmail } from "@/lib/gemini";
+import { createEmailTemplate, sendReminderEmail } from "@/lib/email";
 
 export async function POST(
   request: NextRequest,
@@ -25,74 +27,140 @@ export async function POST(
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    // Verify course ownership
+    // Fetch course with sections and videos to calculate progress
     const course = await prisma.course.findFirst({
       where: { id: courseId, userId: user.id },
-      select: { id: true, title: true }
+      include: {
+        sections: {
+          include: {
+            videos: {
+              select: { id: true }
+            }
+          }
+        }
+      }
     });
 
     if (!course) {
       return NextResponse.json({ error: "Course not found" }, { status: 404 });
     }
 
-    // Call the email send endpoint
-    const baseUrl = process.env.NEXTAUTH_URL || request.nextUrl.origin;
-    const emailResponse = await fetch(`${baseUrl}/api/email/send`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
+    // Step 1: Calculate Course Progress Metrics
+    const totalVideos = course.sections.reduce(
+      (sum, section) => sum + section.videos.length,
+      0
+    );
+
+    // Get all video IDs for this course
+    const videoIds = course.sections.flatMap(section => 
+      section.videos.map(video => video.id)
+    );
+
+    // Query completed progress for this user and course
+    const completedProgress = await prisma.progress.findMany({
+      where: {
+        userId: user.id,
+        videoId: { in: videoIds },
+        completed: true
       },
-      body: JSON.stringify({
-        to: user.email,
-        subject: `Test Email - ${course.title}`,
-        firstName: user.name || "there",
-        from: process.env.FROM_EMAIL || "onboarding@resend.dev",
-        html: `
-          <!DOCTYPE html>
-          <html>
-            <head>
-              <meta charset="utf-8">
-              <meta name="viewport" content="width=device-width, initial-scale=1.0">
-              <title>Test Email - ${course.title}</title>
-            </head>
-            <body style="font-family: Arial, sans-serif; line-height: 1.6; color: #333; max-width: 600px; margin: 0 auto; padding: 20px;">
-              <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
-                <h1 style="color: white; margin: 0;">📧 Test Email</h1>
-              </div>
-              <div style="background: #f9f9f9; padding: 30px; border-radius: 0 0 8px 8px;">
-                <h2 style="color: #333; margin-top: 0;">Hello${user.name ? `, ${user.name}` : ""}!</h2>
-                <p style="font-size: 16px; margin: 20px 0;">
-                  This is a test email for your course: <strong>${course.title}</strong>
-                </p>
-                <p style="font-size: 14px; color: #666; margin: 20px 0;">
-                  If you received this email, your email notifications are working correctly! ✅
-                </p>
-                <div style="margin-top: 30px; padding: 20px; background: white; border-radius: 8px; border-left: 4px solid #667eea;">
-                  <p style="margin: 0; font-size: 14px; color: #666;">
-                    <strong>Course:</strong> ${course.title}<br>
-                    <strong>Course ID:</strong> ${course.id}
-                  </p>
-                </div>
-              </div>
-            </body>
-          </html>
-        `,
-      }),
+      select: { videoId: true, completedAt: true }
     });
 
-    const emailData = await emailResponse.json();
+    const completedVideos = completedProgress.length;
+    const progressPercent = totalVideos > 0 
+      ? Math.round((completedVideos / totalVideos) * 100)
+      : 0;
 
-    if (!emailResponse.ok) {
+    // Step 2: Calculate Days Since Last Study
+    // Get most recent Progress.completedAt date
+    const lastProgressDate = completedProgress
+      .filter(p => p.completedAt)
+      .map(p => new Date(p.completedAt!))
+      .sort((a, b) => b.getTime() - a.getTime())[0];
+
+    // Get most recent DailyCheckIn.createdAt date
+    const lastCheckIn = await prisma.dailyCheckIn.findFirst({
+      where: {
+        userId: user.id,
+        courseId: courseId
+      },
+      orderBy: { createdAt: 'desc' },
+      select: { createdAt: true }
+    });
+
+    const lastCheckInDate = lastCheckIn ? new Date(lastCheckIn.createdAt) : null;
+
+    // Use the most recent date between Progress and DailyCheckIn
+    let lastStudyDate: Date | null = null;
+    if (lastProgressDate && lastCheckInDate) {
+      lastStudyDate = lastProgressDate > lastCheckInDate ? lastProgressDate : lastCheckInDate;
+    } else if (lastProgressDate) {
+      lastStudyDate = lastProgressDate;
+    } else if (lastCheckInDate) {
+      lastStudyDate = lastCheckInDate;
+    }
+
+    // Calculate days since last study
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    let daysSinceLastStudy = 0;
+    if (lastStudyDate) {
+      const lastStudy = new Date(lastStudyDate);
+      lastStudy.setHours(0, 0, 0, 0);
+      const diffTime = today.getTime() - lastStudy.getTime();
+      daysSinceLastStudy = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    }
+
+    // Step 3: Generate Dynamic Email Content with Gemini
+    const emailContent = await generateRoastingEmail({
+      userName: user.name || "there",
+      courseTitle: course.title,
+      progressPercent,
+      completedVideos,
+      totalVideos,
+      daysSinceLastStudy
+    });
+
+    // Step 4: Format Email Template
+    const emailHtml = createEmailTemplate({
+      userName: user.name || "there",
+      courseTitle: course.title,
+      courseId: course.id,
+      progressPercent,
+      completedVideos,
+      totalVideos,
+      body: emailContent.body // This now includes ending remarks
+    });
+
+    // Step 5: Send Email
+    const result = await sendReminderEmail({
+      to: user.email,
+      subject: emailContent.subject,
+      html: emailHtml,
+      courseId: course.id,
+      courseTitle: course.title
+    });
+
+    if (!result.success) {
       return NextResponse.json(
-        { error: emailData.error || "Failed to send email" },
-        { status: emailResponse.status }
+        { error: result.error || "Failed to send email" },
+        { status: 500 }
       );
     }
 
     return NextResponse.json({
       success: true,
-      id: emailData.id,
-      message: "Test email sent successfully",
+      id: result.messageId,
+      message: "Test email sent successfully with AI-generated content",
+      emailPreview: {
+        subject: emailContent.subject,
+        endingRemarks: emailContent.endingRemarks,
+        progressPercent,
+        completedVideos,
+        totalVideos,
+        daysSinceLastStudy
+      }
     });
   } catch (error) {
     console.error('Email sending error:', error);
