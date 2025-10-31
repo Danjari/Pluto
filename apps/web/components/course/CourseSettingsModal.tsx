@@ -139,7 +139,7 @@ export default function CourseSettingsModal({
   if (loading) {
     return (
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-lg">
           <div className="flex items-center justify-center p-8">
             <Loader2 className="h-6 w-6 animate-spin" />
             <span className="ml-2">Loading settings...</span>
@@ -151,7 +151,7 @@ export default function CourseSettingsModal({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -166,17 +166,16 @@ export default function CourseSettingsModal({
           {/* Email Notifications Toggle */}
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-base flex items-center gap-2">
-                <Mail className="h-4 w-4" />
-                Email Notifications
-              </CardTitle>
-              <CardDescription>
-                Receive motivational reminders to keep studying
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Enable email notifications</span>
+                <div>
+                  <CardTitle className="text-base flex items-center gap-2">
+                    <Mail className="h-4 w-4" />
+                    Email Notifications
+                  </CardTitle>
+                  <CardDescription>
+                    Receive motivational reminders to keep studying
+                  </CardDescription>
+                </div>
                 <Switch
                   checked={settings.emailNotificationsEnabled}
                   onCheckedChange={(checked) =>
@@ -184,7 +183,7 @@ export default function CourseSettingsModal({
                   }
                 />
               </div>
-            </CardContent>
+            </CardHeader>
           </Card>
 
           {/* Study Days Selection */}
@@ -197,11 +196,15 @@ export default function CourseSettingsModal({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="grid grid-cols-2 gap-2">
+                <div className="flex flex-wrap gap-2">
                   {DAYS_OF_WEEK.map((day) => (
                     <label
                       key={day.key}
-                      className="flex items-center space-x-2 cursor-pointer p-2 rounded-md hover:bg-gray-50"
+                      className={`flex items-center space-x-1.5 cursor-pointer px-3 py-1.5 rounded-md border transition-all ${
+                        settings.studyDays.includes(day.key)
+                          ? "bg-blue-50 border-blue-300 text-blue-700"
+                          : "bg-white border-gray-200 hover:bg-gray-50 text-gray-700"
+                      }`}
                     >
                       <input
                         type="checkbox"
@@ -209,7 +212,7 @@ export default function CourseSettingsModal({
                         onChange={() => toggleDay(day.key)}
                         className="rounded border-gray-300"
                       />
-                      <span className="text-sm">{day.label}</span>
+                      <span className="text-xs font-medium whitespace-nowrap">{day.label}</span>
                     </label>
                   ))}
                 </div>
@@ -230,12 +233,14 @@ export default function CourseSettingsModal({
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <input
-                  type="time"
-                  value={settings.notificationTime}
-                  onChange={(e) => handleTimeChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+                <div className="flex items-center gap-3">
+                  <input
+                    type="time"
+                    value={settings.notificationTime}
+                    onChange={(e) => handleTimeChange(e.target.value)}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
               </CardContent>
             </Card>
           )}
